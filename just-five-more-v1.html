@@ -59,6 +59,17 @@ footer{height:66px;flex:none;display:flex;align-items:center;justify-content:spa
 .title{text-align:center;margin:12px 0}
 .title .stamp{color:var(--blue);border-color:var(--blue);font-size:22px}
 .quote{font-size:13px;font-style:italic;margin:6px 0 2px}
+.post{display:flex;gap:8px;margin-top:12px}
+.post input{width:86px;font:inherit;font-size:20px;font-weight:bold;text-transform:uppercase;text-align:center;border:2px solid var(--ink);border-radius:6px;padding:6px;background:#fff;color:var(--blue)}
+.post .btn{flex:1}
+.pstat{height:20px;font-size:13px;margin-top:6px;color:#5a6476}
+.board{height:150px;overflow:auto;border:2px solid var(--ink);border-radius:6px;background:#fff;margin-top:6px;font-size:14px}
+.board .r{display:flex;gap:10px;padding:4px 8px;border-bottom:1px dotted var(--line)}
+.board .r.me{background:#e3ecfd}
+.board .r span:first-child{width:28px;color:var(--blue);font-weight:bold}
+.board .r span:nth-child(2){flex:1;font-weight:bold}
+.hsbtns{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.hsbtns .btn{font-size:12px;padding:8px 4px}
 /* math */
 .math{display:flex;flex-direction:column;height:100%;padding:10px;gap:8px}
 .mlab{text-align:center;font-size:13px;color:#5a6476}
@@ -139,6 +150,10 @@ footer{height:66px;flex:none;display:flex;align-items:center;justify-content:spa
 <div id="report" class="ov"><div class="memo">
   <div class="mhead">MANAGER_SVG<div><div class="tt">PERFORMANCE REVIEW</div><div class="ff">TO: You<br>FROM: Management<br>RE: Your shift</div></div></div>
   <div id="rbody" class="rep"></div>
+  <div id="rpost"><div style="font-weight:bold;margin-top:12px">Hall of Overtime</div>
+  <div class="post"><input id="rtag" maxlength="3" placeholder="AAA" autocomplete="off"><button class="btn pri" id="rsend">Post score</button></div>
+  <div class="pstat" id="rstat"></div><div class="board" id="rboard"></div></div>
+  <div id="rledger" class="rep" style="margin-top:12px"></div>
   <div class="mbtns" style="margin-top:14px"><button class="btn" id="rpick">New task</button><button class="btn pri" id="rback">Back to work</button></div>
 </div></div>
 
@@ -147,9 +162,11 @@ footer{height:66px;flex:none;display:flex;align-items:center;justify-content:spa
   <details id="dtasks"><summary>Tasks</summary><div id="mtasks"></div></details>
   <button class="btn wide" id="mreport">Clock out and see report</button>
   <details id="dledger"><summary>Lifetime ledger</summary><div id="ledger"></div><button class="btn wide" id="mreset">Reset ledger</button></details>
+  <details id="dhs"><summary>High scores</summary><div class="hsbtns" id="hsbtns"></div><div class="pstat" id="hsstat"></div><div class="board" id="hsboard"></div></details>
   <button class="btn wide" id="mclose">Close menu</button>
 </div></div>
 
+<script src="https://2026-10-30-orange-scores.vercel.app/sdk.js"></script>
 <script>
 const MGR='<svg viewBox="0 0 60 60" width="52" height="52" style="flex:none"><circle cx="30" cy="22" r="13" fill="#f1d3b3" stroke="#1f2d44" stroke-width="2"/><path d="M8 58c2-14 12-20 22-20s20 6 22 20z" fill="#6b7280" stroke="#1f2d44" stroke-width="2"/><path d="M30 38l-4 6 4 14 4-14z" fill="#2a62d6" stroke="#1f2d44" stroke-width="1.5"/><path d="M23 19h5M32 19h5" stroke="#1f2d44" stroke-width="2"/><path d="M25 28q5 3 10 0" stroke="#1f2d44" stroke-width="2" fill="none"/></svg>';
 document.querySelectorAll('.mhead').forEach(h=>h.innerHTML=h.innerHTML.replace('MANAGER_SVG',MGR));
@@ -196,7 +213,8 @@ function clearStage(){if(cleanup){try{cleanup()}catch(e){}cleanup=null}stage.inn
 
 function startTask(k){
  ['#start','#menu','#report','#memo','#verify'].forEach(hide);
- S={k,batch:0,done:0,acc:[],used:[],intercepted:false};
+ S={k,batch:0,done:0,acc:[],used:[],intercepted:false,posted:false};
+ try{window.Scores&&Scores.start(slug(k))}catch(e){}
  const t=L.tasks[k]||(L.tasks[k]={p:0,d:0,s:0});
  t.p+=5;t.s++;L.tp+=5;save();
  runBatch();
@@ -276,21 +294,55 @@ function report(){
   h+=`<div class="row"><span>Average hesitation</span><b>${(avg/1000).toFixed(1)}s</b></div>`;
   if(fast)h+=`<div style="margin-top:8px;font-weight:bold">The line that got you fastest (${(fast.ms/1000).toFixed(1)}s):</div><div class="quote">"${fast.text}"</div>`;
   const pct=Math.round(r*100);
-  const grade=r<=1?'B':r<2?'C+':r<4?'C':r<8?'C-':'D+';
+  const grade=r<=1?'B':r<2?'C+':r<4?'C':r<8?'C-':'D+';S.grade=grade;
   h+=`<div class="row"><span>Effort vs target</span><b>${pct}%</b></div>`;
   h+=`<div class="row"><span>Grade</span><b style="color:var(--red);font-size:18px">${grade}</b></div>`;
   h+=`<div class="quote">Manager comment: ${pick(["Showed up. Could show up more.","Please perform more better next week.","Good effort, wrong attitude.","We expected more initiative.","Fine. Let's aim higher next week.","Meets some expectations.","Was seen working. Not enough."])}</div>`;
   h+=`<div class="title"><span class="stamp">${titleFor(r)}</span></div>`;
  }
- h+=`<div style="font-weight:bold;margin-top:6px">Lifetime ledger</div>`+ledgerHTML();
  $('#rbody').innerHTML=h;
+ $('#rledger').innerHTML=`<div style="font-weight:bold">Lifetime ledger</div>`+ledgerHTML();
  $('#rback').style.display=S?'':'none';
+ $('#rpost').style.display=S?'':'none';
+ if(S){$('#rtag').value=getTag();$('#rstat').textContent=S.done>0?'Put your initials on it.':'Nothing to post.';loadBoard(slug(S.k),$('#rboard'),null)}
  $('#task').textContent='Clocked out.';$('#count').textContent='';setBar(0,'Clocked out');
  const tb=$('#turnin');tb.style.visibility='hidden';tb.classList.remove('go');
  show('#report');
 }
 $('#rback').addEventListener('click',()=>{const k=S.k;startTask(k)});
 $('#rpick').addEventListener('click',()=>{hide('#report');show('#start')});
+
+/* scores */
+const SLUG={math:'math',petals:'petals',paint:'paint',scratch:'scratch',bubble:'bubble',leaves:'leaves',cable:'cable'};
+function slug(k){return 'just-five-more-'+SLUG[k]}
+function getTag(){try{return localStorage.getItem('just-five-more-v1-tag')||''}catch(e){return''}}
+function setTag(t){try{localStorage.setItem('just-five-more-v1-tag',t)}catch(e){}}
+function loadBoard(game,el,meId){
+ el.textContent='';const w=document.createElement('div');w.className='r';w.textContent='Loading the board...';el.appendChild(w);
+ if(!window.Scores){w.textContent='Score service unreachable.';return}
+ Scores.board(game,20).then(r=>{
+  el.textContent='';
+  if(!r||!r.ok){const x=document.createElement('div');x.className='r';x.textContent='Score service unreachable.';el.appendChild(x);return}
+  if(!r.board.length){const x=document.createElement('div');x.className='r';x.textContent='No scores yet. Be the first sucker.';el.appendChild(x);return}
+  r.board.forEach(e=>{const row=document.createElement('div');row.className='r'+(e.id===meId?' me':'');
+   [String(e.rank),e.tag,e.score+' done'].forEach(t=>{const sp=document.createElement('span');sp.textContent=t;row.appendChild(sp)});el.appendChild(row)});
+ });
+}
+$('#rsend').addEventListener('click',()=>{
+ if(!S)return;const st=$('#rstat');
+ if(S.posted){st.textContent='Already posted this shift.';return}
+ if(S.done<1){st.textContent='Nothing to post.';return}
+ const tag=$('#rtag').value.toUpperCase().replace(/[^A-Z0-9 ]/g,'').slice(0,3);
+ if(!tag.trim()){st.textContent='Initials first.';return}
+ if(!window.Scores){st.textContent='Score service unreachable.';return}
+ setTag(tag);st.textContent='Sending to corporate...';
+ const game=slug(S.k);
+ Scores.submit({game,tag,score:S.done,duration:Math.max(1000,Scores.elapsed(game))}).then(r=>{
+  if(r&&r.ok){S.posted=true;st.textContent=`Logged. Rank ${r.rank}. Grade still ${S.grade}.`;loadBoard(game,$('#rboard'),r.entry.id)}
+  else{const why={tag_rejected:'Those initials got rejected.',slow_down:'Too fast. Wait a few seconds and post again.',score_too_fast:'Corporate thinks you cheated.',offline:'Score service unreachable.'};st.textContent=why[r&&r.error]||'Corporate lost the paperwork. Post again.'}
+ });
+});
+(function(){const box=$('#hsbtns');for(const k in TASKS){const b=document.createElement('button');b.className='btn';b.textContent=TASKS[k].name;b.addEventListener('click',()=>{$('#hsstat').textContent=TASKS[k].name;loadBoard(slug(k),$('#hsboard'),null)});box.appendChild(b)}})();
 
 /* menu */
 function taskButtons(el){el.innerHTML='';for(const k in TASKS){const b=document.createElement('button');b.className='btn wide';b.textContent=TASKS[k].name;b.addEventListener('click',()=>startTask(k));el.appendChild(b)}}
