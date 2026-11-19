@@ -275,6 +275,11 @@ function report(){
   h+=`<div class="row"><span>Excuses swallowed</span><b>${S.acc.length}</b></div>`;
   h+=`<div class="row"><span>Average hesitation</span><b>${(avg/1000).toFixed(1)}s</b></div>`;
   if(fast)h+=`<div style="margin-top:8px;font-weight:bold">The line that got you fastest (${(fast.ms/1000).toFixed(1)}s):</div><div class="quote">"${fast.text}"</div>`;
+  const pct=Math.round(r*100);
+  const grade=r<=1?'B':r<2?'C+':r<4?'C':r<8?'C-':'D+';
+  h+=`<div class="row"><span>Effort vs target</span><b>${pct}%</b></div>`;
+  h+=`<div class="row"><span>Grade</span><b style="color:var(--red);font-size:18px">${grade}</b></div>`;
+  h+=`<div class="quote">Manager comment: ${pick(["Showed up. Could show up more.","Please perform more better next week.","Good effort, wrong attitude.","We expected more initiative.","Fine. Let's aim higher next week.","Meets some expectations.","Was seen working. Not enough."])}</div>`;
   h+=`<div class="title"><span class="stamp">${titleFor(r)}</span></div>`;
  }
  h+=`<div style="font-weight:bold;margin-top:6px">Lifetime ledger</div>`+ledgerHTML();
